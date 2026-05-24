@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Runge Kutta Fehlberg (RKF45)</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <div id="file-notice" class="notice" style="display:none;">
+    You opened this file directly. Run <code>python app.py</code> and visit
+    <code>http://127.0.0.1:5000</code> for full functionality.
+  </div>
+
+  <header>
+    <h1>Runge Kutta Fehlberg (RKF45)</h1>
+    <p>Adaptive 4(5)-order ODE solver — solve $\dfrac{dy}{dt} = f(t, y)$</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Formulas</h2>
+
+      <div class="formula-block">
+        <div class="formula-label">(28) Stage values</div>
+        $$
+        \begin{aligned}
+        k_1 &= h\, f(t_k,\, y_k) \\
+        k_2 &= h\, f\!\left(t_k + \tfrac{1}{4}h,\; y_k + \tfrac{1}{4}k_1\right) \\
+        k_3 &= h\, f\!\left(t_k + \tfrac{3}{8}h,\; y_k + \tfrac{3}{32}k_1 + \tfrac{9}{32}k_2\right) \\
+        k_4 &= h\, f\!\left(t_k + \tfrac{12}{13}h,\; y_k + \tfrac{1932}{2197}k_1 - \tfrac{7200}{2197}k_2 + \tfrac{7296}{2197}k_3\right) \\
+        k_5 &= h\, f\!\left(t_k + h,\; y_k + \tfrac{439}{216}k_1 - 8 k_2 + \tfrac{3680}{513}k_3 - \tfrac{845}{4104}k_4\right) \\
+        k_6 &= h\, f\!\left(t_k + \tfrac{1}{2}h,\; y_k - \tfrac{8}{27}k_1 + 2 k_2 - \tfrac{3544}{2565}k_3 + \tfrac{1859}{4104}k_4 - \tfrac{11}{40}k_5\right)
+        \end{aligned}
+        $$
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-label">(29) 4th-order estimate</div>
+        $$ y_{k+1} = y_k + \tfrac{25}{216}k_1 + \tfrac{1408}{2565}k_3 + \tfrac{2197}{4104}k_4 - \tfrac{1}{5}k_5 $$
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-label">(30) 5th-order estimate</div>
+        $$ z_{k+1} = y_k + \tfrac{16}{135}k_1 + \tfrac{6656}{12825}k_3 + \tfrac{28561}{56430}k_4 - \tfrac{9}{50}k_5 + \tfrac{2}{55}k_6 $$
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-label">(31) Optimal step size</div>
+        $$ s \approx 0.84\left(\frac{\text{tol}\cdot h}{\lvert z_{k+1} - y_{k+1}\rvert}\right)^{1/4} $$
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Inputs</h2>
+      <form id="solve-form">
+        <div class="grid">
+          <div style="grid-column: 1 / -1;">
+            <label for="expression">f(t, y)</label>
+            <input type="text" id="expression" name="expression" value="t + y" required>
+          </div>
+          <div><label for="t0">t₀</label><input type="number" step="any" id="t0" value="0" required></div>
+          <div><label for="y0">y₀</label><input type="number" step="any" id="y0" value="1" required></div>
+          <div><label for="t_end">t_end</label><input type="number" step="any" id="t_end" value="1" required></div>
+          <div><label for="h">Initial h</label><input type="number" step="any" id="h" value="0.1" required></div>
+          <div><label for="tol">Tolerance</label><input type="number" step="any" id="tol" value="0.000001" required></div>
+          <div><label for="h_min">h_min</label><input type="number" step="any" id="h_min" value="0.000001" required></div>
+          <div><label for="h_max">h_max</label><input type="number" step="any" id="h_max" value="1" required></div>
+        </div>
+        <button type="submit" id="submit-btn">Solve</button>
+        <div id="error-box" class="error" style="display:none;"></div>
+      </form>
+    </section>
+
+    <section class="panel" id="results-panel" style="display:none;">
+      <h2>Results</h2>
+      <div class="summary" id="summary"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Step</th><th>t</th><th>y</th><th>h used</th><th>Error</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    if (location.protocol === 'file:') {
+      document.getElementById('file-notice').style.display = 'block';
+    }
+
+    const fmt = (n, d = 6) => {
+      if (n === null || n === undefined) return '';
+      const a = Math.abs(n);
+      if (a !== 0 && (a < 1e-4 || a >= 1e6)) return n.toExponential(d);
+      return Number(n).toFixed(d);
+    };
+
+    document.getElementById('solve-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('error-box');
+      const btn = document.getElementById('submit-btn');
+      const panel = document.getElementById('results-panel');
+      errorBox.style.display = 'none';
+
+      if (location.protocol === 'file:') {
+        errorBox.textContent = 'This page must be served by Flask. Run `python app.py`.';
+        errorBox.style.display = 'block';
+        return;
+      }
+
+      const payload = {
+        expression: document.getElementById('expression').value,
+        t0: parseFloat(document.getElementById('t0').value),
+        y0: parseFloat(document.getElementById('y0').value),
+        t_end: parseFloat(document.getElementById('t_end').value),
+        h: parseFloat(document.getElementById('h').value),
+        tol: parseFloat(document.getElementById('tol').value),
+        h_min: parseFloat(document.getElementById('h_min').value),
+        h_max: parseFloat(document.getElementById('h_max').value),
+      };
+
+      btn.disabled = true; btn.textContent = 'Solving...';
+      try {
+        const r = await fetch('/solve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Solve failed');
+
+        const rows = data.results;
+        const tbody = document.getElementById('results-body');
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.step}</td>
+            <td>${fmt(r.t)}</td>
+            <td>${fmt(r.y)}</td>
+            <td>${fmt(r.h)}</td>
+            <td>${fmt(r.error, 3)}</td>
+            <td class="${r.accepted ? 'accepted' : 'rejected'}">${r.accepted ? 'accepted' : 'rejected'}</td>
+          </tr>
+        `).join('');
+
+        const last = rows[rows.length - 1];
+        document.getElementById('summary').innerHTML = `
+          <div class="card"><div class="label">Steps</div><div class="value">${rows.length - 1}</div></div>
+          <div class="card"><div class="label">Final t</div><div class="value">${fmt(last.t)}</div></div>
+          <div class="card"><div class="label">Final y</div><div class="value">${fmt(last.y)}</div></div>
+          <div class="card"><div class="label">Last error</div><div class="value">${fmt(last.error, 3)}</div></div>
+        `;
+        panel.style.display = 'block';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Solve';
+      }
+    });
+  </script>
+</body>
+</html>
