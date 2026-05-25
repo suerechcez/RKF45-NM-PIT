@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Runge Kutta Fehlberg (RKF45)</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script>
     window.MathJax = {
       tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
@@ -14,179 +14,212 @@
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>
-  <div id="file-notice" class="notice" style="display:none;">
-    You opened this file directly. Run <code>python app.py</code> and visit
-    <code>http://127.0.0.1:5000</code> for full functionality.
-  </div>
-
   <header>
     <h1>Runge Kutta Fehlberg (RKF45)</h1>
     <p>Adaptive 4(5)-order ODE solver — solve $\dfrac{dy}{dt} = f(t, y)$</p>
   </header>
 
   <main>
-    <section class="panel">
-      <h2>1. Mathematical Discussion</h2>
-      <p>
-        The Runge–Kutta–Fehlberg method (RKF45) solves the initial value problem
-        $\dfrac{dy}{dt} = f(t, y),\ y(t_0) = y_0$ using an <em>embedded</em> pair
-        of Runge–Kutta formulas. At every step, two approximations of $y(t_k+h)$
-        are computed simultaneously: $y_{k+1}$ of order 4 and $z_{k+1}$ of order 5.
-        Both share the same six stage values $k_1,\ldots,k_6$, so the extra
-        accuracy comes essentially for free.
-      </p>
-      <p>
-        The local truncation error of the 4th-order formula is estimated by
-        $|z_{k+1} - y_{k+1}|$. If this error exceeds the user-supplied tolerance
-        $\text{tol}$, the step is <strong>rejected</strong> and retried with a
-        smaller $h$; otherwise it is <strong>accepted</strong>. In either case
-        the step size for the next iteration is rescaled by
-        $s \approx 0.84\,(\text{tol}\cdot h / |z_{k+1}-y_{k+1}|)^{1/4}$,
-        producing an adaptive integrator that automatically tightens the mesh
-        in stiff regions and loosens it where the solution is smooth. RKF45 is
-        therefore well-suited to problems where the cost of evaluating $f$
-        dominates and uniform step methods would either over- or under-sample.
-      </p>
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="discussion">Discussion</button>
+      <button class="tab-btn" data-tab="examples">Examples</button>
+      <button class="tab-btn" data-tab="calculator">Calculator</button>
+    </div>
 
-      <h2>2. Worked Examples</h2>
+    <!-- DISCUSSION SECTION -->
+    <section class="tab-content active" id="discussion">
+      <div class="panel">
+        <h2>Mathematical Discussion</h2>
+        <p>
+          The Runge–Kutta–Fehlberg method (RKF45) solves the initial value problem
+          $\dfrac{dy}{dt} = f(t, y),\ y(t_0) = y_0$ using an <em>embedded</em> pair
+          of Runge–Kutta formulas. At every step, two approximations of $y(t_k+h)$
+          are computed simultaneously: $y_{k+1}$ of order 4 and $z_{k+1}$ of order 5.
+          Both share the same six stage values $k_1,\ldots,k_6$, so the extra
+          accuracy comes essentially for free.
+        </p>
+        <p>
+          The local truncation error of the 4th-order formula is estimated by
+          $|z_{k+1} - y_{k+1}|$. If this error exceeds the user-supplied tolerance
+          $\text{tol}$, the step is <strong>rejected</strong> and retried with a
+          smaller $h$; otherwise it is <strong>accepted</strong>. In either case
+          the step size for the next iteration is rescaled by
+          $s \approx 0.84\,(\text{tol}\cdot h / |z_{k+1}-y_{k+1}|)^{1/4}$,
+          producing an adaptive integrator that automatically tightens the mesh
+          in stiff regions and loosens it where the solution is smooth. RKF45 is
+          therefore well-suited to problems where the cost of evaluating $f$
+          dominates and uniform step methods would either over- or under-sample.
+        </p>
 
-      <h3>Example 1 &mdash; $\dfrac{dy}{dt} = t + y,\ y(0)=1,\ h=0.5$</h3>
-      <p>Evaluate one RKF45 step from $t_0=0$ to $t_1=0.5$. With $f(t,y)=t+y$:</p>
-      <div class="formula-block">
-        $$
-        \begin{aligned}
-        k_1 &= 0.5\,f(0,\,1) = 0.5000000000 \\
-        k_2 &= 0.5\,f(0.125,\,1.125) = 0.6250000000 \\
-        k_3 &= 0.5\,f(0.1875,\,1.22265625) = 0.7050781250 \\
-        k_4 &= 0.5\,f(0.46153846,\,1.73282\ldots) = 1.0972348657 \\
-        k_5 &= 0.5\,f(0.5,\,1.84815\ldots) = 1.1740785256 \\
-        k_6 &= 0.5\,f(0.25,\,1.30181\ldots) = 0.7759039463
-        \end{aligned}
-        $$
-      </div>
-      <div class="formula-block">
-        $$
-        \begin{aligned}
-        y_1 &= 1 + \tfrac{25}{216}k_1 + \tfrac{1408}{2565}k_3 + \tfrac{2197}{4104}k_4 - \tfrac{1}{5}k_5 = 1.7974759615 \\
-        z_1 &= 1 + \tfrac{16}{135}k_1 + \tfrac{6656}{12825}k_3 + \tfrac{28561}{56430}k_4 - \tfrac{9}{50}k_5 + \tfrac{2}{55}k_6 = 1.7974108574 \\
-        |z_1 - y_1| &= 6.51 \times 10^{-5}
-        \end{aligned}
-        $$
-      </div>
-      <p>
-        The exact solution is $y(t)=2e^{t}-t-1$, giving $y(0.5)=1.7974425414$.
-        The 5th-order estimate $z_1$ differs from the true value by only
-        $3.17\times 10^{-5}$, while the embedded error indicator
-        $|z_1-y_1|=6.51\times 10^{-5}$ provides a reliable, slightly
-        conservative bound &mdash; exactly as the theory predicts.
-      </p>
+        <h3>Key Advantages</h3>
+        <ul>
+          <li><strong>Adaptive Step Control:</strong> Automatically adjusts step size based on error estimates</li>
+          <li><strong>Efficiency:</strong> Uses embedded formulas to compute both 4th and 5th order approximations</li>
+          <li><strong>Reliability:</strong> Error indicators guide the algorithm to maintain desired accuracy</li>
+          <li><strong>Flexibility:</strong> Works well for both smooth and stiff problems within practical tolerance ranges</li>
+        </ul>
 
-      <h3>Example 2 &mdash; $\dfrac{dy}{dt} = y - t^{2} + 1,\ y(0)=0.5,\ h=0.25$</h3>
-      <p>One RKF45 step from $t_0=0$ to $t_1=0.25$ with $f(t,y)=y-t^2+1$:</p>
-      <div class="formula-block">
-        $$
-        \begin{aligned}
-        k_1 &= 0.25\,f(0,\,0.5) = 0.3750000000 \\
-        k_2 &= 0.25\,f(0.0625,\,0.59375) = 0.3974609375 \\
-        k_3 &= 0.25\,f(0.09375,\,0.60872\ldots) = 0.4095382690 \\
-        k_4 &= 0.25\,f(0.23077,\,0.79899\ldots) = 0.4584970939 \\
-        k_5 &= 0.25\,f(0.25,\,0.83137\ldots) = 0.4658451569 \\
-        k_6 &= 0.25\,f(0.125,\,0.69838\ldots) = 0.4204789125
-        \end{aligned}
-        $$
-      </div>
-      <div class="formula-block">
-        $$
-        \begin{aligned}
-        y_1 &= 0.9204886021 \quad \text{(4th order)} \\
-        z_1 &= 0.9204870493 \quad \text{(5th order)} \\
-        |z_1 - y_1| &= 1.55 \times 10^{-6}
-        \end{aligned}
-        $$
-      </div>
-      <p>
-        The exact solution is $y(t)=(t+1)^{2}-\tfrac{1}{2}e^{t}$, giving
-        $y(0.25)=0.9204872917$. The 5th-order estimate is accurate to
-        $2.4\times 10^{-7}$. Because the embedded error
-        $1.55\times 10^{-6}$ is well below a typical tolerance of $10^{-4}$,
-        the next step size would be <em>increased</em> by
-        $s = 0.84\,(10^{-4}\cdot 0.25 / 1.55\times 10^{-6})^{1/4} \approx 2.4$.
-      </p>
+        <h3>Formulas</h3>
 
-      <h2>3. Formulas</h2>
-
-      <div class="formula-block">
-        <div class="formula-label">(28) Stage values</div>
-        $$
-        \begin{aligned}
-        k_1 &= h\, f(t_k,\, y_k) \\
-        k_2 &= h\, f\!\left(t_k + \tfrac{1}{4}h,\; y_k + \tfrac{1}{4}k_1\right) \\
-        k_3 &= h\, f\!\left(t_k + \tfrac{3}{8}h,\; y_k + \tfrac{3}{32}k_1 + \tfrac{9}{32}k_2\right) \\
-        k_4 &= h\, f\!\left(t_k + \tfrac{12}{13}h,\; y_k + \tfrac{1932}{2197}k_1 - \tfrac{7200}{2197}k_2 + \tfrac{7296}{2197}k_3\right) \\
-        k_5 &= h\, f\!\left(t_k + h,\; y_k + \tfrac{439}{216}k_1 - 8 k_2 + \tfrac{3680}{513}k_3 - \tfrac{845}{4104}k_4\right) \\
-        k_6 &= h\, f\!\left(t_k + \tfrac{1}{2}h,\; y_k - \tfrac{8}{27}k_1 + 2 k_2 - \tfrac{3544}{2565}k_3 + \tfrac{1859}{4104}k_4 - \tfrac{11}{40}k_5\right)
-        \end{aligned}
-        $$
-      </div>
-
-      <div class="formula-block">
-        <div class="formula-label">(29) 4th-order estimate</div>
-        $$ y_{k+1} = y_k + \tfrac{25}{216}k_1 + \tfrac{1408}{2565}k_3 + \tfrac{2197}{4104}k_4 - \tfrac{1}{5}k_5 $$
-      </div>
-
-      <div class="formula-block">
-        <div class="formula-label">(30) 5th-order estimate</div>
-        $$ z_{k+1} = y_k + \tfrac{16}{135}k_1 + \tfrac{6656}{12825}k_3 + \tfrac{28561}{56430}k_4 - \tfrac{9}{50}k_5 + \tfrac{2}{55}k_6 $$
-      </div>
-
-      <div class="formula-block">
-        <div class="formula-label">(31) Optimal step size</div>
-        $$ s \approx 0.84\left(\frac{\text{tol}\cdot h}{\lvert z_{k+1} - y_{k+1}\rvert}\right)^{1/4} $$
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>4. Interactive Calculator</h2>
-      <form id="solve-form">
-        <div class="grid">
-          <div style="grid-column: 1 / -1;">
-            <label for="expression">f(t, y)</label>
-            <input type="text" id="expression" name="expression" value="t + y" required>
-          </div>
-          <div><label for="t0">t₀</label><input type="number" step="any" id="t0" value="0" required></div>
-          <div><label for="y0">y₀</label><input type="number" step="any" id="y0" value="1" required></div>
-          <div><label for="t_end">t_end</label><input type="number" step="any" id="t_end" value="1" required></div>
-          <div><label for="h">Initial h</label><input type="number" step="any" id="h" value="0.1" required></div>
-          <div><label for="tol">Tolerance</label><input type="number" step="any" id="tol" value="0.000001" required></div>
-          <div><label for="h_min">h_min</label><input type="number" step="any" id="h_min" value="0.000001" required></div>
-          <div><label for="h_max">h_max</label><input type="number" step="any" id="h_max" value="1" required></div>
+        <div class="formula-block">
+          <div class="formula-label">Stage values</div>
+          $$
+          \begin{aligned}
+          k_1 &= h\, f(t_k,\, y_k) \\
+          k_2 &= h\, f\!\left(t_k + \tfrac{1}{4}h,\; y_k + \tfrac{1}{4}k_1\right) \\
+          k_3 &= h\, f\!\left(t_k + \tfrac{3}{8}h,\; y_k + \tfrac{3}{32}k_1 + \tfrac{9}{32}k_2\right) \\
+          k_4 &= h\, f\!\left(t_k + \tfrac{12}{13}h,\; y_k + \tfrac{1932}{2197}k_1 - \tfrac{7200}{2197}k_2 + \tfrac{7296}{2197}k_3\right) \\
+          k_5 &= h\, f\!\left(t_k + h,\; y_k + \tfrac{439}{216}k_1 - 8 k_2 + \tfrac{3680}{513}k_3 - \tfrac{845}{4104}k_4\right) \\
+          k_6 &= h\, f\!\left(t_k + \tfrac{1}{2}h,\; y_k - \tfrac{8}{27}k_1 + 2 k_2 - \tfrac{3544}{2565}k_3 + \tfrac{1859}{4104}k_4 - \tfrac{11}{40}k_5\right)
+          \end{aligned}
+          $$
         </div>
-        <button type="submit" id="submit-btn">Solve</button>
-        <div id="error-box" class="error" style="display:none;"></div>
-      </form>
+
+        <div class="formula-block">
+          <div class="formula-label">4th-order estimate</div>
+          $$ y_{k+1} = y_k + \tfrac{25}{216}k_1 + \tfrac{1408}{2565}k_3 + \tfrac{2197}{4104}k_4 - \tfrac{1}{5}k_5 $$
+        </div>
+
+        <div class="formula-block">
+          <div class="formula-label">5th-order estimate</div>
+          $$ z_{k+1} = y_k + \tfrac{16}{135}k_1 + \tfrac{6656}{12825}k_3 + \tfrac{28561}{56430}k_4 - \tfrac{9}{50}k_5 + \tfrac{2}{55}k_6 $$
+        </div>
+
+        <div class="formula-block">
+          <div class="formula-label">Optimal step size</div>
+          $$ s \approx 0.84\left(\frac{\text{tol}\cdot h}{\lvert z_{k+1} - y_{k+1}\rvert}\right)^{1/4} $$
+        </div>
+      </div>
     </section>
 
-    <section class="panel" id="results-panel" style="display:none;">
-      <h2>Results</h2>
-      <div class="summary" id="summary"></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Step</th><th>t</th><th>y</th><th>h used</th><th>Error</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="results-body"></tbody>
-        </table>
+    <!-- EXAMPLES SECTION -->
+    <section class="tab-content" id="examples">
+      <div class="panel">
+        <h2>Worked Examples</h2>
+
+        <h3>Example 1 — $\dfrac{dy}{dt} = t + y,\ y(0)=1,\ h=0.5$</h3>
+        <p>Evaluate one RKF45 step from $t_0=0$ to $t_1=0.5$. With $f(t,y)=t+y$:</p>
+
+        <div class="formula-block">
+          <div class="formula-label">Stage Calculations</div>
+          $$
+          \begin{aligned}
+          k_1 &= 0.5 \cdot f(0, 1) = 0.5 \cdot 1 = 0.5000000000 \\
+          k_2 &= 0.5 \cdot f(0.125, 1.125) = 0.5 \cdot 1.25 = 0.6250000000 \\
+          k_3 &= 0.5 \cdot f(0.1875, 1.22265625) = 0.5 \cdot 1.41015625 = 0.7050781250 \\
+          k_4 &= 0.5 \cdot f(0.46154, 1.73282) = 0.5 \cdot 2.19436 = 1.0971800000 \\
+          k_5 &= 0.5 \cdot f(0.5, 1.84815) = 0.5 \cdot 2.34815 = 1.1740750000 \\
+          k_6 &= 0.5 \cdot f(0.25, 1.30181) = 0.5 \cdot 1.55181 = 0.7759050000
+          \end{aligned}
+          $$
+        </div>
+
+        <div class="formula-block">
+          <div class="formula-label">Solution Estimates</div>
+          $$
+          \begin{aligned}
+          y_1 &= 1 + \tfrac{25}{216}(0.5) + \tfrac{1408}{2565}(0.7050781) + \tfrac{2197}{4104}(1.0972) - \tfrac{1}{5}(1.1741) \\
+              &= 1.7974759615 \quad \text{(4th order)} \\
+          z_1 &= 1 + \tfrac{16}{135}(0.5) + \tfrac{6656}{12825}(0.7050781) + \tfrac{28561}{56430}(1.0972) \\
+              &\quad - \tfrac{9}{50}(1.1741) + \tfrac{2}{55}(0.7759) \\
+              &= 1.7974108574 \quad \text{(5th order)} \\
+          \text{Error} &= |z_1 - y_1| = 6.51 \times 10^{-5}
+          \end{aligned}
+          $$
+        </div>
+
+        <p>
+          <strong>Analysis:</strong> The exact solution is $y(t)=2e^{t}-t-1$, giving $y(0.5)=1.7974425414$.
+          The 5th-order estimate differs from the true value by only $3.17\times 10^{-5}$, while the embedded
+          error indicator $|z_1-y_1|=6.51\times 10^{-5}$ provides a reliable, slightly conservative bound.
+        </p>
+
+        <h3>Example 2 — $\dfrac{dy}{dt} = y - t^{2} + 1,\ y(0)=0.5,\ h=0.25$</h3>
+        <p>One RKF45 step from $t_0=0$ to $t_1=0.25$ with $f(t,y)=y-t^2+1$:</p>
+
+        <div class="formula-block">
+          <div class="formula-label">Stage Calculations</div>
+          $$
+          \begin{aligned}
+          k_1 &= 0.25 \cdot f(0, 0.5) = 0.25 \cdot 1.5 = 0.3750000000 \\
+          k_2 &= 0.25 \cdot f(0.0625, 0.59375) = 0.25 \cdot 1.59024 = 0.3975600000 \\
+          k_3 &= 0.25 \cdot f(0.09375, 0.60872) = 0.25 \cdot 1.63809 = 0.4095225000 \\
+          k_4 &= 0.25 \cdot f(0.23077, 0.79899) = 0.25 \cdot 1.83399 = 0.4584975000 \\
+          k_5 &= 0.25 \cdot f(0.25, 0.83137) = 0.25 \cdot 1.86339 = 0.4658475000 \\
+          k_6 &= 0.25 \cdot f(0.125, 0.69838) = 0.25 \cdot 1.68194 = 0.4204850000
+          \end{aligned}
+          $$
+        </div>
+
+        <div class="formula-block">
+          <div class="formula-label">Solution Estimates</div>
+          $$
+          \begin{aligned}
+          y_1 &= 0.5 + \tfrac{25}{216}(0.375) + \tfrac{1408}{2565}(0.40952) + \tfrac{2197}{4104}(0.45850) \\
+              &\quad - \tfrac{1}{5}(0.46585) \\
+              &= 0.9204886021 \quad \text{(4th order)} \\
+          z_1 &= 0.5 + \tfrac{16}{135}(0.375) + \tfrac{6656}{12825}(0.40952) + \tfrac{28561}{56430}(0.45850) \\
+              &\quad - \tfrac{9}{50}(0.46585) + \tfrac{2}{55}(0.42049) \\
+              &= 0.9204870493 \quad \text{(5th order)} \\
+          \text{Error} &= |z_1 - y_1| = 1.55 \times 10^{-6}
+          \end{aligned}
+          $$
+        </div>
+
+        <p>
+          <strong>Analysis:</strong> The exact solution is $y(t)=(t+1)^{2}-\tfrac{1}{2}e^{t}$, giving
+          $y(0.25)=0.9204872917$. The 5th-order estimate is accurate to $2.4\times 10^{-7}$.
+          With embedded error $1.55\times 10^{-6}$ well below a typical tolerance of $10^{-4}$,
+          the step size would be increased by approximately $s \approx 2.4$ for the next iteration.
+        </p>
       </div>
+    </section>
+
+    <!-- CALCULATOR SECTION -->
+    <section class="tab-content" id="calculator">
+      <div class="panel">
+        <h2>Interactive Calculator</h2>
+        <form id="solve-form">
+          <div class="grid">
+            <div style="grid-column: 1 / -1;">
+              <label for="expression">f(t, y)</label>
+              <input type="text" id="expression" name="expression" value="t + y" required
+                     placeholder="e.g., t + y, y - t**2 + 1, sin(t)*y">
+            </div>
+            <div><label for="t0">t₀</label><input type="number" step="any" id="t0" value="0" required></div>
+            <div><label for="y0">y₀</label><input type="number" step="any" id="y0" value="1" required></div>
+            <div><label for="t_end">t_end</label><input type="number" step="any" id="t_end" value="1" required></div>
+            <div><label for="h">Initial h</label><input type="number" step="any" id="h" value="0.1" required></div>
+            <div><label for="tol">Tolerance</label><input type="number" step="any" id="tol" value="0.000001" required></div>
+            <div><label for="h_min">h_min</label><input type="number" step="any" id="h_min" value="0.000001" required></div>
+            <div><label for="h_max">h_max</label><input type="number" step="any" id="h_max" value="1" required></div>
+          </div>
+          <div class="button-group">
+            <button type="submit" id="submit-btn">Solve</button>
+            <button type="button" id="download-btn" style="display:none;">Download CSV</button>
+          </div>
+          <div id="error-box" class="error" style="display:none;"></div>
+        </form>
+      </div>
+
+      <section class="panel" id="results-panel" style="display:none;">
+        <h2>Results</h2>
+        <div class="summary" id="summary"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Step</th><th>t</th><th>y</th><th>h used</th><th>Error</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+          </table>
+        </div>
+      </section>
     </section>
   </main>
 
   <script>
-    if (location.protocol === 'file:') {
-      document.getElementById('file-notice').style.display = 'block';
-    }
-
     const fmt = (n, d = 6) => {
       if (n === null || n === undefined) return '';
       const a = Math.abs(n);
@@ -194,18 +227,26 @@
       return Number(n).toFixed(d);
     };
 
+    // Tab navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.dataset.tab;
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        btn.classList.add('active');
+      });
+    });
+
+    let currentResults = [];
+
     document.getElementById('solve-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errorBox = document.getElementById('error-box');
       const btn = document.getElementById('submit-btn');
+      const dlBtn = document.getElementById('download-btn');
       const panel = document.getElementById('results-panel');
       errorBox.style.display = 'none';
-
-      if (location.protocol === 'file:') {
-        errorBox.textContent = 'This page must be served by Flask. Run `python app.py`.';
-        errorBox.style.display = 'block';
-        return;
-      }
 
       const payload = {
         expression: document.getElementById('expression').value,
@@ -218,7 +259,8 @@
         h_max: parseFloat(document.getElementById('h_max').value),
       };
 
-      btn.disabled = true; btn.textContent = 'Solving...';
+      btn.disabled = true;
+      btn.textContent = 'Solving...';
       try {
         const r = await fetch('/solve', {
           method: 'POST',
@@ -228,7 +270,8 @@
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Solve failed');
 
-        const rows = data.results;
+        currentResults = data.results;
+        const rows = currentResults;
         const tbody = document.getElementById('results-body');
         tbody.innerHTML = rows.map(r => `
           <tr>
@@ -249,12 +292,45 @@
           <div class="card"><div class="label">Last error</div><div class="value">${fmt(last.error, 3)}</div></div>
         `;
         panel.style.display = 'block';
+        dlBtn.style.display = 'inline-block';
       } catch (err) {
         errorBox.textContent = err.message;
         errorBox.style.display = 'block';
       } finally {
-        btn.disabled = false; btn.textContent = 'Solve';
+        btn.disabled = false;
+        btn.textContent = 'Solve';
       }
+    });
+
+    document.getElementById('download-btn').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ results: currentResults }),
+        });
+        if (!response.ok) throw new Error('Download failed');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'rkf45_results.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (err) {
+        alert('Error downloading: ' + err.message);
+      }
+    });
+
+    // MathJax rendering on tab switch
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setTimeout(() => {
+          if (window.MathJax) MathJax.contentDocument.rerender();
+        }, 100);
+      });
     });
   </script>
 </body>

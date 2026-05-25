@@ -2,13 +2,15 @@
 import ast
 import math
 import operator as op
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
+from io import BytesIO
+import csv
 
 from rkf45 import solve_rkf45
 
 app = Flask(__name__)
 
-# Safe expression evaluator for f(t, y) -------------------------------------
+# Safe expression evaluator for f(t, y)
 _ALLOWED_BINOPS = {
     ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
     ast.Div: op.truediv, ast.Pow: op.pow, ast.Mod: op.mod,
@@ -27,7 +29,7 @@ _ALLOWED_NAMES = {"pi": math.pi, "e": math.e}
 
 
 def _eval_node(node, vars_):
-    if isinstance(node, ast.Num):  # py<3.8 compat
+    if isinstance(node, ast.Num):
         return node.n
     if isinstance(node, ast.Constant):
         if isinstance(node.value, (int, float)):
@@ -60,7 +62,6 @@ def make_f(expr: str):
     def f(t, y):
         return _eval_node(tree.body, {"t": t, "y": y})
 
-    # Smoke test so errors surface before solving
     f(0.0, 0.0)
     return f
 
@@ -89,7 +90,42 @@ def solve():
         f = make_f(expr)
         results = solve_rkf45(f, t0, y0, t_end, h, tol, h_min, h_max)
         return jsonify({"results": results})
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/download", methods=["POST"])
+def download():
+    """Download results as CSV."""
+    data = request.get_json(force=True) or {}
+    try:
+        results = data.get("results", [])
+
+        output = BytesIO()
+        writer = csv.DictWriter(
+            output,
+            fieldnames=["step", "t", "y", "h", "error", "accepted"],
+            mode='w'
+        )
+
+        # Manually write CSV since we're working with BytesIO
+        lines = ["step,t,y,h,error,accepted\n"]
+        for row in results:
+            lines.append(
+                f"{row['step']},{row['t']},{row['y']},{row['h']},"
+                f"{row['error']},{row['accepted']}\n"
+            )
+
+        output.write(''.join(lines).encode('utf-8'))
+        output.seek(0)
+
+        return send_file(
+            output,
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name="rkf45_results.csv"
+        )
+    except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 
