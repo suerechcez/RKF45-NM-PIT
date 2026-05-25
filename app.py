@@ -27,6 +27,8 @@ _ALLOWED_NAMES = {"pi": math.pi, "e": math.e}
 
 
 def _eval_node(node, vars_):
+    if isinstance(node, ast.Num):  # py<3.8 compat
+        return node.n
     if isinstance(node, ast.Constant):
         if isinstance(node.value, (int, float)):
             return node.value

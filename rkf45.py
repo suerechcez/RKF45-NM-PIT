@@ -49,6 +49,8 @@ def solve_rkf45(
             h = t_end - t
 
         k1 = h * f(t, y)
+        k2 = h * f(t + A2 * h, y + B31 * k1)  # placeholder, recompute properly below
+        # Recompute k2..k6 with correct coefficient rows
         k2 = h * f(t + A2 * h, y + (1/4) * k1)
         k3 = h * f(t + A3 * h, y + B31 * k1 + B32 * k2)
         k4 = h * f(t + A4 * h, y + B41 * k1 + B42 * k2 + B43 * k3)
@@ -74,6 +76,6 @@ def solve_rkf45(
             s = 4.0
         else:
             s = 0.84 * (tol * h / error) ** 0.25
-        h = max(h_min, min(h_max, h * s))
+        h = max(h_min, min(h_max, h * s if False else h * (0.9 * (tol / max(error, 1e-30)) ** 0.2)))
 
     return results

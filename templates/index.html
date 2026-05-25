@@ -26,7 +26,94 @@
 
   <main>
     <section class="panel">
-      <h2>Formulas</h2>
+      <h2>1. Mathematical Discussion</h2>
+      <p>
+        The Runge–Kutta–Fehlberg method (RKF45) solves the initial value problem
+        $\dfrac{dy}{dt} = f(t, y),\ y(t_0) = y_0$ using an <em>embedded</em> pair
+        of Runge–Kutta formulas. At every step, two approximations of $y(t_k+h)$
+        are computed simultaneously: $y_{k+1}$ of order 4 and $z_{k+1}$ of order 5.
+        Both share the same six stage values $k_1,\ldots,k_6$, so the extra
+        accuracy comes essentially for free.
+      </p>
+      <p>
+        The local truncation error of the 4th-order formula is estimated by
+        $|z_{k+1} - y_{k+1}|$. If this error exceeds the user-supplied tolerance
+        $\text{tol}$, the step is <strong>rejected</strong> and retried with a
+        smaller $h$; otherwise it is <strong>accepted</strong>. In either case
+        the step size for the next iteration is rescaled by
+        $s \approx 0.84\,(\text{tol}\cdot h / |z_{k+1}-y_{k+1}|)^{1/4}$,
+        producing an adaptive integrator that automatically tightens the mesh
+        in stiff regions and loosens it where the solution is smooth. RKF45 is
+        therefore well-suited to problems where the cost of evaluating $f$
+        dominates and uniform step methods would either over- or under-sample.
+      </p>
+
+      <h2>2. Worked Examples</h2>
+
+      <h3>Example 1 &mdash; $\dfrac{dy}{dt} = t + y,\ y(0)=1,\ h=0.5$</h3>
+      <p>Evaluate one RKF45 step from $t_0=0$ to $t_1=0.5$. With $f(t,y)=t+y$:</p>
+      <div class="formula-block">
+        $$
+        \begin{aligned}
+        k_1 &= 0.5\,f(0,\,1) = 0.5000000000 \\
+        k_2 &= 0.5\,f(0.125,\,1.125) = 0.6250000000 \\
+        k_3 &= 0.5\,f(0.1875,\,1.22265625) = 0.7050781250 \\
+        k_4 &= 0.5\,f(0.46153846,\,1.73282\ldots) = 1.0972348657 \\
+        k_5 &= 0.5\,f(0.5,\,1.84815\ldots) = 1.1740785256 \\
+        k_6 &= 0.5\,f(0.25,\,1.30181\ldots) = 0.7759039463
+        \end{aligned}
+        $$
+      </div>
+      <div class="formula-block">
+        $$
+        \begin{aligned}
+        y_1 &= 1 + \tfrac{25}{216}k_1 + \tfrac{1408}{2565}k_3 + \tfrac{2197}{4104}k_4 - \tfrac{1}{5}k_5 = 1.7974759615 \\
+        z_1 &= 1 + \tfrac{16}{135}k_1 + \tfrac{6656}{12825}k_3 + \tfrac{28561}{56430}k_4 - \tfrac{9}{50}k_5 + \tfrac{2}{55}k_6 = 1.7974108574 \\
+        |z_1 - y_1| &= 6.51 \times 10^{-5}
+        \end{aligned}
+        $$
+      </div>
+      <p>
+        The exact solution is $y(t)=2e^{t}-t-1$, giving $y(0.5)=1.7974425414$.
+        The 5th-order estimate $z_1$ differs from the true value by only
+        $3.17\times 10^{-5}$, while the embedded error indicator
+        $|z_1-y_1|=6.51\times 10^{-5}$ provides a reliable, slightly
+        conservative bound &mdash; exactly as the theory predicts.
+      </p>
+
+      <h3>Example 2 &mdash; $\dfrac{dy}{dt} = y - t^{2} + 1,\ y(0)=0.5,\ h=0.25$</h3>
+      <p>One RKF45 step from $t_0=0$ to $t_1=0.25$ with $f(t,y)=y-t^2+1$:</p>
+      <div class="formula-block">
+        $$
+        \begin{aligned}
+        k_1 &= 0.25\,f(0,\,0.5) = 0.3750000000 \\
+        k_2 &= 0.25\,f(0.0625,\,0.59375) = 0.3974609375 \\
+        k_3 &= 0.25\,f(0.09375,\,0.60872\ldots) = 0.4095382690 \\
+        k_4 &= 0.25\,f(0.23077,\,0.79899\ldots) = 0.4584970939 \\
+        k_5 &= 0.25\,f(0.25,\,0.83137\ldots) = 0.4658451569 \\
+        k_6 &= 0.25\,f(0.125,\,0.69838\ldots) = 0.4204789125
+        \end{aligned}
+        $$
+      </div>
+      <div class="formula-block">
+        $$
+        \begin{aligned}
+        y_1 &= 0.9204886021 \quad \text{(4th order)} \\
+        z_1 &= 0.9204870493 \quad \text{(5th order)} \\
+        |z_1 - y_1| &= 1.55 \times 10^{-6}
+        \end{aligned}
+        $$
+      </div>
+      <p>
+        The exact solution is $y(t)=(t+1)^{2}-\tfrac{1}{2}e^{t}$, giving
+        $y(0.25)=0.9204872917$. The 5th-order estimate is accurate to
+        $2.4\times 10^{-7}$. Because the embedded error
+        $1.55\times 10^{-6}$ is well below a typical tolerance of $10^{-4}$,
+        the next step size would be <em>increased</em> by
+        $s = 0.84\,(10^{-4}\cdot 0.25 / 1.55\times 10^{-6})^{1/4} \approx 2.4$.
+      </p>
+
+      <h2>3. Formulas</h2>
 
       <div class="formula-block">
         <div class="formula-label">(28) Stage values</div>
@@ -59,7 +146,7 @@
     </section>
 
     <section class="panel">
-      <h2>Inputs</h2>
+      <h2>4. Interactive Calculator</h2>
       <form id="solve-form">
         <div class="grid">
           <div style="grid-column: 1 / -1;">

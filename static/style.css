@@ -123,3 +123,7 @@ th:first-child, td:first-child { text-align: left; }
 }
 .summary .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
 .summary .value { font-size: 1.125rem; font-weight: 600; margin-top: 0.25rem; }
+
+.panel h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.05rem; }
+.panel p { line-height: 1.55; margin: 0.6rem 0; }
+.panel p em { color: #cbd5e1; }
